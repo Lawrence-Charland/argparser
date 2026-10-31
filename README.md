@@ -29,6 +29,9 @@ English | [简体中文](./README.zh_CN.md)
   count, maximum flag repetition.
 - Results are stored on the entries themselves (`general_result`, `content`,
   `repetition`), so no separate result object is needed.
+- Every flag occurrence is recorded by name: `content` keeps one entry per
+  occurrence, so `-vv --verbose` yields `{"v", "v", "verbose"}` and you can tell
+  which alias was used.
 - Replaceable error messages: `describe()` plus overridable `AP_DESCRIBE_*`
   macros.
 - Doxygen comments with usage snippets in the header.
@@ -182,6 +185,23 @@ The complete runnable version is in [main.cpp](./main.cpp):
 | `--`                 | end of options; everything after it is positional |
 | `-`                  | positional value (a lone dash is not an option)   |
 
+## Flag names are recorded, not just counted
+
+For a `flag` entry, `repetition` counts the occurrences and `content` keeps one
+name per occurrence, in command-line order, without the leading dashes:
+
+```cpp
+const ap_entry &verbose = app.entry("verbose");
+// with "./app -vV --verbose --verbose":
+// verbose.repetition == 4
+// verbose.content    == {"v", "V", "verbose", "verbose"}
+```
+
+So `-v`, `-V` and `--verbose` remain distinguishable even though they all belong
+to the same entry, and `repetition` is always `content.size()`. Even
+`--verbose=x` records the name, while additionally reporting
+`flag_unexpected_values`.
+
 ## API at a glance
 
 `ap_type` — the kind of argument an entry describes:
@@ -190,7 +210,7 @@ The complete runnable version is in [main.cpp](./main.cpp):
 | ------------ | ---------------------------------------------------- |
 | `positional` | identified by position, not by a name or prefix      |
 | `option`     | `-x` / `--xxx` that takes values                     |
-| `flag`       | `-x` / `--xxx` that takes no value; counted         |
+| `flag`       | `-x` / `--xxx` that takes no value; counted, and each used name is kept in `content` |
 
 `ap_defkey` — keys used to define an entry through the `ap_entry` constructor:
 
@@ -216,7 +236,7 @@ The complete runnable version is in [main.cpp](./main.cpp):
 | `positional_range`, `valcnt_range`, `max_repetition` | validation limits  |
 | `long_names`, `short_names`        | accepted names                          |
 | `general_result`                   | `ap_result`, defaults to `unparsed`     |
-| `content`                          | positionals / option values / used flag names |
+| `content`                          | positionals / option values / one name per flag occurrence (no dashes) |
 | `repetition`                       | how many times a flag occurred          |
 
 `ap_instance` — owns the entries and the preparsed arguments:

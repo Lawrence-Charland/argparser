@@ -77,6 +77,7 @@ enum class ap_type
      * @brief       Flag. A named argument introduced by a dash (`-`) or
      * double dash (`--`) that takes no value, whose occurrence count is
      * recorded.
+     * @see         argparser::ap_entry::content
      */
     flag,
 };
@@ -386,13 +387,19 @@ struct ap_entry
      * @brief       The content fetched from the cmdline. For an
      * `argparser::ap_type::positional` entry it holds the positional
      * arguments, for an `argparser::ap_type::option` entry the option values,
-     * and for an `argparser::ap_type::flag` entry every name that was used.
+     * and for an `argparser::ap_type::flag` entry one name per occurrence, in
+     * command line order, recording which name was actually used. Names are
+     * stored without the leading dashes, so `-vv --verbose` yields
+     * `{"v", "v", "verbose"}` and `-vV` yields `{"v", "V"}`.
      * @see         argparser::ap_instance::evaluate
      */
     std::vector<std::string> content;
     /**
      * @brief       The number of times the flag occurred on the cmdline.
      * Unused for the other types. Defaults to 0.
+     * @note        For a flag this always equals `content.size()`, since every
+     * occurrence also appends its name to `content`.
+     * @see         argparser::ap_entry::content
      * @see         argparser::ap_instance::evaluate
      */
     unsigned repetition = 0;
