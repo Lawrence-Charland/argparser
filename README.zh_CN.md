@@ -26,9 +26,9 @@
 
 - 校验能力：位置参数的最少/最多数量、选项值的最少/最多数量、标志的最大重复次数。
 
-- 解析结果直接存放在条目自身（`general_result`、`content`、`repetition`）， 无需额外的结果对象。
+- 解析结果直接存放在条目自身（`general_result`、`content`、`repetition`），无需额外的结果对象。`content` 由三种类型共用，含义见 [「`content` 里放的是什么」](#content-里放的是什么)。
 
-- 每次出现的标志都会按实际使用的名称记录下来：`content` 为每次出现保留一项， 例如 `-vv --verbose` 会得到 `{"v", "v", "verbose"}`，因此可以区分究竟用了 哪个别名。
+- 标志按名称记录、而不只是计数，因此 `-v` 与 `--verbose` 这类别名可以区分开。
 
 - 可替换的错误提示：`describe()` 以及可覆盖的 `AP_DESCRIBE_*` 宏。
 
@@ -38,7 +38,7 @@
 
 - 支持 C++17 的编译器（目前只在 GCC 上使用过）。
 
-- CMake 3.10+（可选，也可以直接编译两个源文件）。
+- CMake 3.10+（可选，也可以直接编译 `argparser.cpp` 和你自己的驱动）。
 
 ## 项目结构
 
@@ -46,12 +46,19 @@
 argparser/
 ├── include/argparser.hpp   公共头文件：声明 + Doxygen 注释
 ├── argparser.cpp           实现
-├── main.cpp                示例：通过分组实现子命令分发
+├── main.cpp                手工测试用的临时驱动程序（不属于 API）
 ├── CMakeLists.txt
 └── CMakePresets.json       "linux-g++" 预设
 ```
 
+`main.cpp` 是一份测试用例，而不是示例：它只是随手用来手工验证解析器的小程序，
+随时可能被改写、扩充甚至删除，请不要在它之上搭建工具或期望。真正的文档是本
+README 与头文件中的片段，而不是那个示例二进制。
+
 ## 构建与运行
+
+下面的命令构建的是示例目标 `app`。在你自己的项目里，请把目标和源文件换成自己
+的；库本身并不依赖 `main.cpp`。
 
 使用自带的 CMake 预设：
 
@@ -151,7 +158,8 @@ if (app.entry("head").content[0] == "subA")
 }
 ```
 
-完整可运行版本见 [main.cpp](./main.cpp)：
+示例驱动 [main.cpp](./main.cpp) 就是这样分发的。它只是一份测试用例，能接受的
+命令行随时会变；目前的行为是：
 
 ```
 ./app subA -i in.txt -o out.txt   # 退出码 0
@@ -176,9 +184,19 @@ if (app.entry("head").content[0] == "subA")
 | `-` | 位置参数值（单独的短横线不是选项） |
 
 
-## 标志不只计次，还会记录名称
+## `content` 里放的是什么
 
-对 `flag` 条目来说，`repetition` 统计出现次数，`content` 则按命令行顺序为每次 出现保留一个名称（不含前置的短横线）：
+`content` 是一个 `std::vector<std::string>`，承载条目解析出的内容。它的含义
+取决于条目的 `type`，而不是这个字段本身：
+
+| `type` | `content` 中保存的内容 |
+| - | - |
+| `positional` | 位置参数，按命令行顺序排列 |
+| `option` | 为该选项收集到的值 |
+| `flag` | 每次出现所使用的名称（不含前置短横线） |
+
+`flag` 这一种值得说明，因为此时 `content` 存的是名称而不是值。`repetition` 统计
+出现次数，`content` 则按命令行顺序为每次出现保留一个名称：
 
 ```
 const ap_entry &verbose = app.entry("verbose");
@@ -187,7 +205,9 @@ const ap_entry &verbose = app.entry("verbose");
 // verbose.content    == {"v", "V", "verbose", "verbose"}
 ```
 
-因此即使 `-v`、`-V`、`--verbose` 属于同一条目，也能区分实际使用的是哪一个； 并且 `repetition` 恒等于 `content.size()`。即使是 `--verbose=x` 也会记录名称， 同时额外报告 `flag_unexpected_values`。
+因此即使 `-v`、`-V`、`--verbose` 属于同一条目，也能区分实际使用的是哪一个；
+并且 `repetition` 恒等于 `content.size()`。即使是 `--verbose=x` 也会记录名称，
+同时额外报告 `flag_unexpected_values`。
 
 ## API 速览
 
@@ -225,7 +245,7 @@ const ap_entry &verbose = app.entry("verbose");
 | `positional_range`、`valcnt_range`、`max_repetition` | 校验限制 |
 | `long_names`、`short_names` | 可接受的名称 |
 | `general_result` | `ap_result`，默认 `unparsed` |
-| `content` | 位置参数 / 选项值 / 每次标志出现时使用的名称（不含短横线） |
+| `content` | 解析出的内容；具体含义取决于 `type`（见[上文](#content-里放的是什么)） |
 | `repetition` | 标志出现的次数 |
 
 

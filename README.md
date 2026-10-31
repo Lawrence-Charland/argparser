@@ -28,10 +28,10 @@ English | [简体中文](./README.zh_CN.md)
 - Validation: minimum/maximum positional count, minimum/maximum option value
   count, maximum flag repetition.
 - Results are stored on the entries themselves (`general_result`, `content`,
-  `repetition`), so no separate result object is needed.
-- Every flag occurrence is recorded by name: `content` keeps one entry per
-  occurrence, so `-vv --verbose` yields `{"v", "v", "verbose"}` and you can tell
-  which alias was used.
+  `repetition`), so no separate result object is needed. `content` serves all
+  three types; see [What `content` holds](#what-content-holds).
+- Flags are recorded by name, not merely counted, so aliases such as `-v` and
+  `--verbose` stay distinguishable.
 - Replaceable error messages: `describe()` plus overridable `AP_DESCRIBE_*`
   macros.
 - Doxygen comments with usage snippets in the header.
@@ -39,7 +39,8 @@ English | [简体中文](./README.zh_CN.md)
 ## Requirements
 
 - A C++17 compiler (only GCC has been used so far).
-- CMake 3.10+ (optional — the two sources can also be compiled directly).
+- CMake 3.10+ (optional — `argparser.cpp` and a driver of your own can also be
+  compiled directly).
 
 ## Project layout
 
@@ -47,12 +48,21 @@ English | [简体中文](./README.zh_CN.md)
 argparser/
 ├── include/argparser.hpp   public header: declarations + Doxygen comments
 ├── argparser.cpp           implementation
-├── main.cpp                demo: subcommand-style dispatch via groups
+├── main.cpp                scratch driver for manual testing (not part of the API)
 ├── CMakeLists.txt
 └── CMakePresets.json       "linux-g++" preset
 ```
 
+`main.cpp` is a test case, not an example: a throwaway program used to exercise
+the parser by hand. It may be rewritten, extended or removed at any time, so do
+not build tooling or expectations on it. The snippets in this README and in the
+header are the documentation; the demo binary is not.
+
 ## Build and run
+
+The commands below build the demo target `app`. In your own project, replace the
+target and source list with your own; the library itself is not tied to
+`main.cpp`.
 
 With the bundled CMake preset:
 
@@ -161,7 +171,9 @@ if (app.entry("head").content[0] == "subA")
 }
 ```
 
-The complete runnable version is in [main.cpp](./main.cpp):
+The demo driver [main.cpp](./main.cpp) dispatches exactly this way. It exists
+only as a test case, so the command line it accepts will change; right now it
+behaves like this:
 
 ```text
 ./app subA -i in.txt -o out.txt   # exit 0
@@ -185,10 +197,21 @@ The complete runnable version is in [main.cpp](./main.cpp):
 | `--`                 | end of options; everything after it is positional |
 | `-`                  | positional value (a lone dash is not an option)   |
 
-## Flag names are recorded, not just counted
+## What `content` holds
 
-For a `flag` entry, `repetition` counts the occurrences and `content` keeps one
-name per occurrence, in command-line order, without the leading dashes:
+`content` is a single `std::vector<std::string>` and it is the payload of the
+parsed entry. Its meaning is decided by the entry's `type`, not by the field
+itself:
+
+| `type`       | What `content` holds                                              |
+| ------------ | ----------------------------------------------------------------- |
+| `positional` | the positional arguments, in command-line order                   |
+| `option`     | the values collected for the option                               |
+| `flag`       | one name per occurrence, without the leading dashes               |
+
+The flag case deserves a note, because there `content` records names rather than
+values. `repetition` counts the occurrences, while `content` keeps one name per
+occurrence, in command-line order:
 
 ```cpp
 const ap_entry &verbose = app.entry("verbose");
@@ -236,7 +259,7 @@ to the same entry, and `repetition` is always `content.size()`. Even
 | `positional_range`, `valcnt_range`, `max_repetition` | validation limits  |
 | `long_names`, `short_names`        | accepted names                          |
 | `general_result`                   | `ap_result`, defaults to `unparsed`     |
-| `content`                          | positionals / option values / one name per flag occurrence (no dashes) |
+| `content`                          | parsing payload; its meaning depends on `type` (see [above](#what-content-holds)) |
 | `repetition`                       | how many times a flag occurred          |
 
 `ap_instance` — owns the entries and the preparsed arguments:
