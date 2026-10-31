@@ -1,3 +1,0 @@
-/home/lawrence/.local/lib/libargparser.so.0.1.0
-/home/lawrence/.local/lib/libargparser.so.0
-/home/lawrence/.local/lib/libargparser.so

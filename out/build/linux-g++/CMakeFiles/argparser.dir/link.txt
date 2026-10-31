@@ -1,1 +1,0 @@
-/usr/bin/g++ -fPIC -g -shared -Wl,--dependency-file=CMakeFiles/argparser.dir/link.d -Wl,-soname,libargparser.so.0 -o libargparser.so.0.1.0 CMakeFiles/argparser.dir/argparser.cpp.o
