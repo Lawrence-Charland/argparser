@@ -275,7 +275,7 @@ const ap_entry &verbose = app.entry("verbose");
 
 - **`min_value_count >= 1` 会让选项变成必填项：** 若命令行中没有该选项， 条目会报告 `option_too_few_values`。
 
-- **先调用 `pre_parse`，再调用 `evaluate`。** 首次 `pre_parse` 之前调用 `argv_zero()` 属于未定义行为。
+- **先调用 `pre_parse`，再调用任何形式的 `evaluate` 方法。** 首次 `pre_parse` 之前调用 `argv_zero()` 属于未定义行为。
 
 - **`evaluate` 不会清空上一次的结果。** `content` 与 `repetition` 会累加； 想重新开始请调用 `reset_results()` 并重新 `pre_parse`。
 
