@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file        argparser.hpp
  * @brief       A command line argument parser for GNU and UNIX styles.
  * Belongs to LC Projects. This is the header file.
  * @author      Lawrence Charland
+ * @copyright   Copyright (c) 2026 Lawrence-Charland. Released under the MIT
+ * License; see the `LICENSE` file for the full text.
  * @details     An `argparser::ap_instance` owns a list of
  * `argparser::ap_entry` objects, each describing one argument.
  * `argparser::ap_instance::pre_parse` splits the raw `argv` into styled tokens,

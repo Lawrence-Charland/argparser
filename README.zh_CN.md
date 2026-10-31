@@ -2,7 +2,7 @@
 
 一个面向 GNU/UNIX 风格选项的小型命令行参数解析库，使用 C++17 编写。
 
-[English](file:///home/lawrence/My_files/Development/C++/argparser/README.md) | 简体中文
+[English](./README.md) | 简体中文
 
 > **本项目是个人练习项目，也是首次发布。** 它因学习和日常使用而写，没有经过审计、模糊测试或生产环境检验， 因此请预期它在细节上仍显粗糙，行为也随时可能调整。
 
@@ -151,7 +151,7 @@ if (app.entry("head").content[0] == "subA")
 }
 ```
 
-完整可运行版本见 [main.cpp](file:///home/lawrence/My_files/Development/C++/argparser/main.cpp)：
+完整可运行版本见 [main.cpp](./main.cpp)：
 
 ```
 ./app subA -i in.txt -o out.txt   # 退出码 0
@@ -285,7 +285,19 @@ const ap_entry &verbose = app.entry("verbose");
 
 ## 文档
 
-更详尽的API 参考写在 [include/argparser.hpp](file:///home/lawrence/My_files/Development/C++/argparser/include/argparser.hpp) 的 Doxygen 注释中，其中包含构造函数的使用片段。若要生成 HTML，请运行 Doxygen 并把 `INPUT` 设为 `include`、`EXTRACT_ALL` 设为 `YES`（或用你自己的 Doxyfile 指向该头文件）。
+更详尽的 API 参考写在 [include/argparser.hpp](./include/argparser.hpp) 的 Doxygen 注释中，其中包含构造函数的使用片段。若要生成 HTML，请运行 Doxygen 并把 `INPUT` 设为 `include`、`EXTRACT_ALL` 设为 `YES`（或用你自己的 Doxyfile 指向该头文件）。
+
+## 许可证
+
+MIT 许可证 —— 详见 [LICENSE](./LICENSE)。
+
+版权所有 (c) 2026 Lawrence-Charland。
+
+简而言之：只要保留版权声明与许可声明，你可以自由使用、复制、修改、合并、
+发布、分发、再许可和/或销售本软件。本软件按「原样」提供，不附带任何形式的
+担保。
+
+MIT 许可证适用于整个项目以及每一个提交，与版本号无关。
 
 ## 作者
 

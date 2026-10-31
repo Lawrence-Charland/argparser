@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file        argparser.cpp
  * @brief       A command line argument parser for GNU and UNIX styles.
  * Belongs to LC Projects. This is the source file.
  * @author      Lawrence Charland
+ * @copyright   Copyright (c) 2026 Lawrence-Charland. Released under the MIT
+ * License; see the `LICENSE` file for the full text.
  */
 
 #include <stdexcept>

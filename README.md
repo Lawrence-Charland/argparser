@@ -312,6 +312,19 @@ The API reference lives in the Doxygen comments of
 snippets. To generate HTML, run Doxygen with `INPUT = include` and
 `EXTRACT_ALL = YES` (or point your own Doxyfile at the header).
 
+## License
+
+MIT License — see [LICENSE](./LICENSE).
+
+Copyright (c) 2026 Lawrence-Charland.
+
+In short: you may use, copy, modify, merge, publish, distribute, sublicense and
+sell this software, as long as the copyright notice and this permission notice
+are included. The software is provided "as is", without warranty of any kind.
+
+The MIT License applies to the project as a whole and to every commit; it is not
+tied to any version number.
+
 ## Author
 
 Lawrence Charland — LC Projects. Personal practice project, first release.

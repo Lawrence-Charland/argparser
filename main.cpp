@@ -1,10 +1,25 @@
+// SPDX-License-Identifier: MIT
+/**
+ * @file        main.cpp
+ * @brief       Demo of the argument parser: subcommand dispatch via groups.
+ * @author      Lawrence Charland
+ * @copyright   Copyright (c) 2026 Lawrence-Charland. Released under the MIT
+ * License; see the `LICENSE` file for the full text.
+ * @details     The positional entry `head` selects the subcommand, then only
+ * the entries of the matching group are evaluated:
+ * - `app subA -i in.txt -o out.txt`
+ * - `app subB -v`
+ * @note        `subB-verbose` allows one repetition, so `app subB -v -v` fails
+ * with `argparser::ap_result::flag_too_many_repetition`.
+ */
+
 #include <iostream>
 
 #include <argparser.hpp>
 
 using namespace argparser;
 
-int main(int argc, char **argv) // app -v -i -c pos1 pos2
+int main(int argc, char **argv)
 {
     // clang-format off
     ap_instance app({
