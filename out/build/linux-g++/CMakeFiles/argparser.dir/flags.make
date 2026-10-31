@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -Dargparser_EXPORTS
 
-CXX_INCLUDES = -I/home/lawrence/.local/include
+CXX_INCLUDES = -I/home/lawrence/My_files/Development/C++/argparser/include
 
 CXX_FLAGS = -g -fPIC
 

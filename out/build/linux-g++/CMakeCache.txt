@@ -104,7 +104,7 @@ CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 //Enable output of a compile_commands.json file listing the exact
 // compiler invocation for each translation unit. Implemented by
 // the Makefile and Ninja generators; ignored elsewhere.
-CMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE
+CMAKE_EXPORT_COMPILE_COMMANDS:UNINITIALIZED=ON
 
 //Value Computed by CMake.
 CMAKE_FIND_PACKAGE_REDIRECTS_DIR:STATIC=/home/lawrence/My_files/Development/C++/argparser/out/build/linux-g++/CMakeFiles/pkgRedirects
@@ -315,7 +315,7 @@ CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4
 //Minor version of cmake used to create the current loaded cache
 CMAKE_CACHE_MINOR_VERSION:INTERNAL=4
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=4
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=5
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE
 CMAKE_COLOR_MAKEFILE-ADVANCED:INTERNAL=1
 //Path to CMake executable.

@@ -1,173 +1,459 @@
-#include <algorithm>
+/**
+ * @file        argparser.cpp
+ * @brief       A command line argument parser for GNU and UNIX styles.
+ * Belongs to LC Projects. This is the source file.
+ * @author      Lawrence Charland
+ */
+
+#include <stdexcept>
+
 #include <argparser.hpp>
-#include <cstring>
 
-ap_arg_entry::ap_arg_entry(const char *_argument, ap_style _style,
-                           const char separator)
-    : argument(_argument), flag_index(argument.find(separator))
+namespace argparser
 {
-    // Start with -
-    bool is_short = (argument.find('-') == std::string::npos ? false : true);
-    // Start with --
-    bool is_long =
-        (is_short == false
-             ? false
-             : (argument.find("--") == std::string::npos ? false : true));
-    // Long is not short
-    if (is_long == true)
-        is_short = false;
-    // Short option
-    if (_style == ap_style::ap_unix_gnu && is_short == true)
-        format = ap_arg_format::ap_short_opt;
-    // Long option (or just option in some cases)
-    else if ((_style == ap_style::ap_unix_gnu && is_long == true) ||
-             (_style == ap_style::ap_xtoolkit && is_short == true) ||
-             (_style == ap_style::ap_simple_kv &&
-              flag_index != std::string::npos))
-        format = ap_arg_format::ap_long_opt;
-    // Positional
-    else
-        format = ap_arg_format::ap_positional;
-}
 
-argparser_instance::argparser_instance(int argc, char **argv, ap_style _style)
-    : style(_style)
+/**
+ * @defgroup    internal_helpers Internal helpers
+ * @{
+ */
+
+/**
+ * @brief       Splits `values` at every occurrence of `separator`.
+ * @param       values          The string to split.
+ * @param       separator       The separator character.
+ * @return      The split parts. An empty `values` yields one empty part.
+ */
+static std::vector<std::string> separate(const std::string &values,
+                                         char separator)
 {
-    for (int i = 0; i < argc; i++)
+    if (values.empty())
+        return {""};
+    std::vector<std::string> result;
+    std::size_t start = 0;
+    while (true)
     {
-        if (std::strcmp(argv[i], "--") == 0 && style != ap_style::ap_linear)
+        std::size_t pos = values.find(separator, start);
+        if (pos == std::string::npos)
         {
-            for (i++; i < argc; i++)
-                args.emplace_back(
-                    ap_arg_entry(argv[i], ap_style::ap_linear, '='));
+            result.emplace_back(values.substr(start));
             break;
         }
-        args.emplace_back(ap_arg_entry(
-            argv[i], (i == 0 ? ap_style::ap_linear : _style), '='));
+        result.emplace_back(values.substr(start, pos - start));
+        start = pos + 1;
     }
-}
-
-void argparser_instance::print_debug(std::ostream &os)
-{
-    for (auto &it : args)
-        os << it.argument << '\t' << static_cast<int>(it.format) << '\t'
-           << static_cast<int>(
-                  it.flag_index == std::string::npos ? -1 : it.flag_index)
-           << std::endl;
-}
-
-std::vector<std::string> argparser_instance::get_positionals()
-{
-    std::vector<std::string> result;
-    for (auto &it : args)
-        if (it.format == ap_arg_format::ap_positional)
-            result.push_back(it.argument);
     return result;
 }
 
-std::string argparser_instance::get_positional(int sequence)
+/**
+ * @brief       Splits `value` at the first `=`.
+ * @param       value           The string to split.
+ * @return      The part before `=` and the part after it. The second part is
+ * empty when `value` contains no `=`.
+ */
+static std::pair<std::string, std::string> equation(const std::string &value)
 {
-    for (auto &it : args)
-        if (it.format == ap_arg_format::ap_positional)
-            if (sequence == 0)
-                return it.argument;
-            else
-                sequence--;
-    return "";
+    std::size_t breakpt = value.find('=');
+    if (breakpt == std::string::npos)
+        return {value, ""};
+    else
+        return {value.substr(0, breakpt), value.substr(breakpt + 1)};
 }
 
-int argparser_instance::find_flag(std::string long_flag)
+/**
+ * @}
+ */
+
+/**
+ * @defgroup   entry_definition_parser Entry definition parser
+ * @{
+ */
+
+ap_entry::ap_entry(
+    const std::string &_name, ap_type _type,
+    const std::vector<std::pair<ap_defkey, std::string>> &definitions)
+    : name(_name), type(_type)
 {
-    int weight = 0;
-    for (auto &it : args)
+    std::vector<std::string> tmpvec;
+    int tmpint;
+    try
     {
-        switch (style)
+        for (auto &it : definitions)
         {
-        case ap_style::ap_unix_gnu:
-            if (it.format != ap_arg_format::ap_long_opt ||
-                it.flag_index != std::string::npos)
-                continue;
-            if (it.argument.substr(2) == long_flag)
-                weight++,it.used=true;
-            break;
-        case ap_style::ap_xtoolkit:
-            if (it.format != ap_arg_format::ap_opt ||
-                it.flag_index != std::string::npos)
-                continue;
-            if (it.argument.substr(1) == long_flag)
-                weight++,it.used=true;
-            break;
-        case ap_style::ap_simple_kv:
-            if (it.format != ap_arg_format::ap_opt ||
-                it.flag_index != std::string::npos)
-                continue;
-            if (it.argument == long_flag)
-                weight++,it.used=true;
-            break;
-        default:
-            if (it.argument == long_flag)
-                weight++,it.used=true;
+            switch (it.first)
+            {
+            case ap_defkey::group:
+                group = it.second;
+                break;
+            case ap_defkey::explanation:
+                explanation = it.second;
+                break;
+            case ap_defkey::no_consume:
+                if (it.second.empty() == false)
+                    throw std::runtime_error("no_consume is not assignable. "
+                                             "Please leave the value empty.");
+                consume = false;
+                break;
+            case ap_defkey::long_name:
+                tmpvec = separate(it.second, ',');
+                for (auto &_it : tmpvec)
+                    if (_it.empty() == true)
+                        throw std::runtime_error("long names cannot be empty.");
+                long_names.insert(tmpvec.begin(), tmpvec.end());
+                break;
+            case ap_defkey::short_name:
+                tmpvec = separate(it.second, ',');
+                for (auto &_it : tmpvec)
+                    if (_it.length() != 1)
+                        throw std::runtime_error(
+                            "short names must be single characters.");
+                    else if (_it == "-")
+                        throw std::runtime_error(
+                            "short names cannot be \'-\'.");
+                    else
+                        short_names.insert(_it[0]);
+                break;
+            case ap_defkey::min_positional_count:
+                tmpint = std::stoi(it.second);
+                if (tmpint < 0)
+                    throw std::runtime_error(
+                        "min_positional_count must be >=0.");
+                positional_range.first = static_cast<unsigned>(tmpint);
+                break;
+            case ap_defkey::max_positional_count:
+                positional_range.second = std::stoi(it.second);
+                if (positional_range.second == 0)
+                    throw std::runtime_error(
+                        "max_positional_count cannot be 0.");
+                break;
+            case ap_defkey::min_value_count:
+                tmpint = std::stoi(it.second);
+                if (tmpint < 0)
+                    throw std::runtime_error("min_value_count must be >=0.");
+                valcnt_range.first = static_cast<unsigned>(tmpint);
+                break;
+            case ap_defkey::max_value_count:
+                valcnt_range.second = std::stoi(it.second);
+                if (valcnt_range.second == 0)
+                    throw std::runtime_error("max_value_count cannot be 0.");
+                break;
+            case ap_defkey::max_repetition:
+                max_repetition = std::stoi(it.second);
+                if (max_repetition == 0)
+                    throw std::runtime_error("max_repetition cannot be 0.");
+                break;
+            default:
+                throw std::runtime_error("Invalid ap_defkey.");
+            }
         }
     }
-    return weight;
-}
-
-int argparser_instance::find_flag(char short_flag)
-{
-    int weight = 0;
-    if (style == ap_style::ap_unix_gnu)
+    catch (const std::exception &e)
     {
-        for (auto &it : args)
-            if (it.format == ap_arg_format::ap_short_opt &&
-                it.flag_index == std::string::npos)
-                weight += std::count(it.argument.begin(), it.argument.end(),
-                                     short_flag);
+        throw std::runtime_error(
+            "argparser: Error occurred while parsing definition of \'" + name +
+            "\' :\t" + e.what());
     }
-    else if (style == ap_style::ap_xtoolkit)
+}
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup    instance Instance
+ * @{
+ */
+
+void ap_instance::add_entry(const ap_entry &entry, std::size_t index)
+{
+    if (index == SIZE_MAX)
+        index = entries.size();
+    if (name_mapper.find(entry.name) != name_mapper.end())
+        throw std::runtime_error("The entry named \'" + entry.name +
+                                 "\' already exists.");
+    entries.insert(entries.begin() + index, entry);
+    // Every entry at or after the insertion point has shifted back by one.
+    for (auto &it : name_mapper)
+        if (it.second >= index)
+            ++it.second;
+    name_mapper.emplace(entry.name, index);
+}
+
+void ap_instance::delete_entry(std::size_t index, bool clear_storage)
+{
+    if (index >= entries.size())
+        throw std::runtime_error("No such index in entries.");
+    name_mapper.erase(entries[index].name);
+    if (clear_storage == true)
     {
-        for (auto &it : args)
-            if (it.format == ap_arg_format::ap_opt &&
-                it.argument.length() == 2 && it.argument[1] == short_flag)
-                weight++;
+        entries.erase(entries.begin() + index);
+        // Every entry after the erased one has shifted forward by one.
+        for (auto &it : name_mapper)
+            if (it.second > index)
+                --it.second;
     }
-    return weight;
 }
 
-int argparser_instance::find_flag(char short_flag, std::string long_flag)
+void ap_instance::update_entry(const ap_entry &entry)
 {
-    return find_flag(short_flag) + find_flag(long_flag);
+    auto found = name_mapper.find(entry.name);
+    if (found == name_mapper.end())
+        throw std::runtime_error(
+            "Entry named \'" + entry.name +
+            "\' is not added yet. Did you mean \'add_entry\'?");
+    entries[found->second] = entry;
 }
 
-std::vector<std::string>
-argparser_instance::get_value(std::string long_option,
-                              unsigned int num_required, int num_limit)
+ap_instance::ap_instance(const std::vector<ap_entry> &_entries)
 {
-    std::vector<std::string> result;
-    for (int i = 1; i < args.size(); i++)
+    for (auto &it : _entries)
+        add_entry(it);
+}
+
+void ap_instance::pre_parse(int argc, char **argv)
+{
+    // Derive the registries from the entries, so that the entries stay the
+    // single source of truth for the names.
+    short_options.clear();
+    long_options.clear();
+    for (std::size_t i = 0; i < entries.size(); i++)
     {
-        if (args[i].format == ap_arg_format::ap_opt &&
-            ((style == ap_style::ap_unix_gnu &&
-              args[i].argument.find(long_option) == 2 &&
-              args[i].flag_index == long_option.length() + 2) ||
-             (style == ap_style::ap_xtoolkit &&
-              args[i].argument.find(long_option) == 1 &&
-              args[i].flag_index == long_option.length() + 1) ||
-             (style == ap_style::ap_linear &&
-              args[i].argument.find(long_option) == 0 &&
-              args[i].flag_index == long_option.length())))
+        auto found = name_mapper.find(entries[i].name);
+        if (found == name_mapper.end()) // Inactive entry
+            continue;
+        found->second = i; // Keep the index in step after insertions/erasures
+        short_options.insert(entries[i].short_names.begin(),
+                             entries[i].short_names.end());
+        long_options.insert(entries[i].long_names.begin(),
+                            entries[i].long_names.end());
+    }
+
+    // Parse the cmdline
+    args.clear();
+    args.emplace_back(std::string(argv[0]), ap_arg_style::argv_zero);
+    std::string tmp;
+    std::pair<std::string, std::string> tmppair;
+    for (int i = 1; i < argc; i++)
+    {
+        tmp = argv[i];
+        if (tmp == "--") // Separator
+            for (i++; i < argc; i++)
+                args.emplace_back(std::string(argv[i]), ap_arg_style::simple);
+        else if (tmp.find("--") == 0) // Double-dash
         {
-            result.push_back(args[i].argument.substr(args[i].flag_index));
-            if (result.size() == num_limit)
+            tmppair = equation(tmp.substr(2));
+            if (long_options.find(tmppair.first) != long_options.end())
+                // Preparse if it's a long option
+                args.emplace_back(tmp.substr(2), ap_arg_style::double_dash);
+            else // Keep still otherwise
+                args.emplace_back(tmp, ap_arg_style::simple);
+        }
+        else if (tmp[0] == '-' && tmp.length() >= 2)
+        {
+            if (short_options.find(tmp[1]) == short_options.end())
+                // Keep still if it's not a short option
+                args.emplace_back(tmp, ap_arg_style::simple);
+            else
+            {
+                for (std::size_t i = 1; i < tmp.length(); i++)
+                    if (short_options.find(tmp[i]) != short_options.end())
+                        // Merged
+                        args.emplace_back(std::string{tmp[i]},
+                                          ap_arg_style::single_dash);
+                    else // Sticky value
+                    {
+                        args.back().first += "=" + tmp.substr(i);
+                        break;
+                    }
+            }
+        }
+        else // Simple
+            args.emplace_back(tmp, ap_arg_style::simple);
+    }
+}
+
+void ap_instance::evaluate_entry(ap_entry &entry)
+{
+    std::vector<std::list<std::pair<std::string, ap_arg_style>>::iterator>
+        consumption;
+    std::pair<std::string, std::string> tmppair;
+    unsigned counter = 0;
+    switch (entry.type)
+    {
+    case ap_type::flag:
+        for (auto it = args.begin(); it != args.end(); it++)
+        {
+            if (it->second != ap_arg_style::single_dash &&
+                it->second != ap_arg_style::double_dash)
+                // Must be -xxxx or --xxx
+                continue;
+            tmppair = equation(it->first);
+            if ((it->second == ap_arg_style::single_dash &&
+                 entry.short_names.find(tmppair.first[0]) !=
+                     entry.short_names.end()) ||
+                (it->second == ap_arg_style::double_dash &&
+                 entry.long_names.find(tmppair.first) !=
+                     entry.long_names.end()))
+            {
+                if (tmppair.second.empty() == false) // xxx=yyy is not allowed
+                    entry.general_result = ap_result::flag_unexpected_values;
+                entry.repetition++, entry.content.push_back(tmppair.first),
+                    consumption.push_back(it);
+            }
+        }
+        if (entry.max_repetition >= 0 &&
+            entry.repetition > entry.max_repetition)
+            entry.general_result = ap_result::flag_too_many_repetition;
+        break;
+    case ap_type::option:
+        for (auto it = args.begin(); it != args.end(); it++)
+        {
+            if (it->second != ap_arg_style::single_dash &&
+                it->second != ap_arg_style::double_dash)
+                // Must be -xxx or --xxx
+                continue;
+            tmppair = equation(it->first);
+            if ((it->second == ap_arg_style::single_dash &&
+                 entry.short_names.find(tmppair.first[0]) !=
+                     entry.short_names.end()) ||
+                (it->second == ap_arg_style::double_dash &&
+                 entry.long_names.find(tmppair.first) !=
+                     entry.long_names.end()))
+            {
+                consumption.push_back(it);
+                if (entry.valcnt_range.second >= 0 &&
+                    counter >= entry.valcnt_range.second)
+                    // Too much values (redundant keys)
+                    entry.general_result = ap_result::option_too_many_values;
+                else if (tmppair.second.empty() == false) // xxx=yyy
+                    entry.content.push_back(tmppair.second), counter++;
+                else // xxx y1 y2 ... yn [next-key]
+                {
+                    for (it++; it != args.end(); it++)
+                    {
+                        if (it->second != ap_arg_style::simple ||
+                            counter == entry.valcnt_range.second)
+                        { // Boundary
+                            it--;
+                            break;
+                        }
+                        entry.content.push_back(it->first),
+                            consumption.push_back(it), counter++;
+                    }
+                }
+            }
+            if (it == args.end())
                 break;
         }
-        else if (args[i].format == ap_arg_format::ap_opt &&
-                 ((style == ap_style::ap_unix_gnu &&
-                   args[i].argument.substr(2) == long_option) ||
-                  (style == ap_style::ap_xtoolkit &&
-                   args[i].argument.substr(1) == long_option)))
-        {
-
-        }
+        if (counter < entry.valcnt_range.first) // Too few values
+            entry.general_result = ap_result::option_too_few_values;
+        break;
+    case ap_type::positional:
+        for (auto it = args.begin();
+             it != args.end() && counter < entry.positional_range.second; it++)
+            if (it->second == ap_arg_style::simple)
+                entry.content.push_back(it->first), consumption.push_back(it),
+                    counter++;
+        if (counter < entry.positional_range.first) // Too few positionals
+            entry.general_result = ap_result::positional_too_few_args;
+        break;
+    default:
+        throw std::runtime_error("Invalid ap_type");
     }
+    if (entry.general_result == ap_result::unparsed)
+        entry.general_result = ap_result::success;
+    if (entry.consume == true)
+        for (auto &it : consumption)
+            args.erase(it);
+}
+
+void ap_instance::evaluate(const std::string &group)
+{
+    for (auto &it : entries)
+        if (name_mapper.find(it.name) != name_mapper.end() && it.group == group)
+            evaluate_entry(it);
+}
+
+void ap_instance::evaluate()
+{
+    for (auto &it : entries)
+        if (name_mapper.find(it.name) != name_mapper.end())
+            evaluate_entry(it);
+}
+
+void ap_instance::reset_results()
+{
+    for (auto &it : entries)
+    {
+        it.general_result = ap_result::unparsed;
+        it.content.clear();
+        it.repetition = 0;
+    }
+}
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup    inquiry Inquiry
+ * @{
+ */
+
+bool ap_instance::fine(bool ignore_redundant)
+{
+    if (args.size() > 1 && ignore_redundant == false) // Redundant arguments
+        return false;
+    for (auto &it : entries)
+        if (it.general_result != ap_result::success &&
+            it.general_result != ap_result::unparsed)
+            return false;
+    return true;
+}
+
+bool ap_instance::fine(const std::string &group)
+{
+    for (auto &it : entries)
+        if (it.group == group && it.general_result != ap_result::success &&
+            it.general_result != ap_result::unparsed)
+            return false;
+    return true;
+}
+
+std::vector<std::pair<std::string, ap_result>> ap_instance::errors()
+{
+    std::vector<std::pair<std::string, ap_result>> result;
+    for (auto &it : entries)
+        if (it.general_result != ap_result::success &&
+            it.general_result != ap_result::unparsed)
+            result.emplace_back(it.name, it.general_result);
+    if (args.size() > 1) // Redundant arguments
+        result.emplace_back((++args.begin())->first,
+                            ap_result::invalid_arguments);
     return result;
 }
+
+const ap_entry &ap_instance::entry(const std::string &name)
+{
+    return entries[name_mapper.at(name)];
+}
+
+const ap_entry &ap_instance::entry(std::size_t index)
+{
+    return entries[index];
+}
+
+std::size_t ap_instance::get_index(const std::string &name)
+{
+    return name_mapper.at(name);
+}
+
+const std::string_view ap_instance::argv_zero()
+{
+    return args.begin()->first;
+}
+
+/**
+ * @}
+ */
+
+} // namespace argparser

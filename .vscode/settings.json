@@ -1,3 +1,16 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/g++"
+    "clangd.path": "/usr/sbin/clangd",
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/out/build/linux-g++",
+        "--background-index",
+        "--clang-tidy",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--query-driver=/usr/bin/g++,/usr/bin/gcc,/usr/bin/clang"
+    ],
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.intelliSenseEngineFallback": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.formatting": "disabled"
 }

@@ -1,19 +1,19 @@
 [
 {
   "directory": "/home/lawrence/My_files/Development/C++/argparser/out/build/linux-g++",
-  "command": "/usr/bin/g++ -Dargparser_EXPORTS -I/home/lawrence/.local/include -g -fPIC -o CMakeFiles/argparser.dir/argparser.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
+  "command": "/usr/bin/g++ -Dargparser_EXPORTS -I/home/lawrence/My_files/Development/C++/argparser/include -g -fPIC -o CMakeFiles/argparser.dir/argparser.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
   "file": "/home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
   "output": "CMakeFiles/argparser.dir/argparser.cpp.o"
 },
 {
   "directory": "/home/lawrence/My_files/Development/C++/argparser/out/build/linux-g++",
-  "command": "/usr/bin/g++  -I/home/lawrence/.local/include -g -o CMakeFiles/app.dir/main.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/main.cpp",
+  "command": "/usr/bin/g++  -I/home/lawrence/My_files/Development/C++/argparser/include -g -o CMakeFiles/app.dir/main.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/main.cpp",
   "file": "/home/lawrence/My_files/Development/C++/argparser/main.cpp",
   "output": "CMakeFiles/app.dir/main.cpp.o"
 },
 {
   "directory": "/home/lawrence/My_files/Development/C++/argparser/out/build/linux-g++",
-  "command": "/usr/bin/g++  -I/home/lawrence/.local/include -g -o CMakeFiles/app.dir/argparser.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
+  "command": "/usr/bin/g++  -I/home/lawrence/My_files/Development/C++/argparser/include -g -o CMakeFiles/app.dir/argparser.cpp.o -c /home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
   "file": "/home/lawrence/My_files/Development/C++/argparser/argparser.cpp",
   "output": "CMakeFiles/app.dir/argparser.cpp.o"
 }
